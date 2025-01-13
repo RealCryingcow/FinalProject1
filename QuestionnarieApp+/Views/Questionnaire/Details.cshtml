@@ -1,0 +1,23 @@
+﻿<div class="container mt-4">
+    <h2 class="mb-3">@Model.Title</h2>
+    <p><strong>Description:</strong> @Model.Description</p>
+    <p><strong>Total Participants:</strong> @Model.ParticipantCount</p>
+
+    <hr />
+
+    @foreach (var question in Model.Questions)
+    {
+            <div class="mb-4">
+                <h4 class="text-primary">@question.Text</h4>
+                <ul class="list-group">
+                @foreach (var option in question.Options)
+                {
+                            <li class="list-group-item">
+                                <span class="font-weight-bold">@option.Text</span>
+                                <span class="badge badge-secondary ml-2">@option.PraticipantCount participants</span>
+                            </li>
+                }
+                </ul>
+            </div>
+    }
+</div>

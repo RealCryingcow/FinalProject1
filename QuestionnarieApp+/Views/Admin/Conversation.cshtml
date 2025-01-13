@@ -1,0 +1,35 @@
+﻿<h2>Messages with @ViewData["UserId"]</h2>
+<div id="message-list">
+    @foreach (var message in Model)
+    {
+            <div>
+                <b>@(message.IsAdminMessage ? "Admin" : "User"):</b>
+            @message.Content <i>at @message.SentAt.ToLocalTime()</i>
+            </div>
+    }
+</div>
+<textarea id="message-input" placeholder="Type your message..."></textarea>
+<button id="send-button" class="btn btn-primary">Send</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/messageHub")
+        .build();
+
+    connection.on("ReceiveMessage", (senderId, content, timestamp) => {
+        const messageList = document.getElementById("message-list");
+        const message = document.createElement("div");
+        message.innerHTML = `<b>${senderId}:</b> ${content} <i>at ${new Date(timestamp).toLocaleTimeString()}</i>`;
+        messageList.appendChild(message);
+    });
+
+    connection.start().catch(err => console.error(err.toString()));
+
+    document.getElementById("send-button").addEventListener("click", async () => {
+        const content = document.getElementById("message-input").value;
+        const userId = "@ViewData["UserId"]";
+        await connection.invoke("SendMessageToUser", "AdminId", userId, content); // Replace AdminId dynamically
+        document.getElementById("message-input").value = "";
+    });
+</script>

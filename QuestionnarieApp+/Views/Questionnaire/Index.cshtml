@@ -1,0 +1,135 @@
+﻿@model IEnumerable<QuestionnarieApp_.ViewModels.QuestionnaireViewModel>
+
+<h2>Available Questionnaires</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Participants</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var questionnaire in Model)
+            {
+                        <tr>
+                            <td>@questionnaire.Title</td>
+                            <td>@questionnaire.Description</td>
+                            <td id="participant-count-@questionnaire.Id">@questionnaire.ParticipantCount</td>
+                            <td>
+                        @if (User.IsInRole("Admin"))
+                        {
+                                        <a asp-action="Edit" asp-route-id="@questionnaire.Id" class="btn btn-primary btn-sm">Edit</a>
+                                        <a asp-action="Details" asp-route-id="@questionnaire.Id" class="btn btn-info btn-sm">Details</a>
+                                        <a asp-action="Delete" asp-route-id="@questionnaire.Id" class="btn btn-danger btn-sm">Delete</a>
+                        }
+                        else
+                        {
+                                        <a asp-action="Join" asp-route-id="@questionnaire.Id" class="btn btn-success btn-sm">Join</a>
+                        }
+                            </td>
+                        </tr>
+            }
+        }
+        else
+        {
+                <tr>
+                    <td colspan="5" class="text-center">No questionnaires available</td>
+                </tr>
+        }
+    </tbody>
+</table>
+
+@if (!User.IsInRole("Admin"))
+{
+        <input type="hidden" id="user-id" value="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value" />
+        <button id="open-chat" style="position: fixed; bottom: 20px; right: 20px; background: #007bff; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
+            💬
+        </button>
+
+        <div id="chat-popup" style="display: none; position: fixed; bottom: 80px; right: 20px; width: 300px; background: #fff; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
+            <div style="background: #007bff; color: white; padding: 10px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                <span>Send a Message</span>
+                <button id="close-chat" style="float: right; background: none; border: none; color: white;">&times;</button>
+            </div>
+            <div id="chat-messages" style="padding: 10px; height: 200px; overflow-y: auto;"></div>
+            <textarea id="chat-input" placeholder="Type your message..." style="width: 100%; border: none; padding: 10px; box-sizing: border-box; border-top: 1px solid #ccc;"></textarea>
+            <button id="send-message" style="width: 100%; background: #007bff; color: white; border: none; padding: 10px;">Send</button>
+        </div>
+}
+
+@section Scripts {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const isAdmin = document.getElementById("is-admin")?.value === "true";
+
+                if (!isAdmin) {
+                    console.log("User is not an admin. Initializing chat functions.");
+
+                    document.getElementById('open-chat').addEventListener('click', function () {
+                        console.log("Chat popup opened.");
+                        const chatPopup = document.getElementById('chat-popup');
+                        chatPopup.style.display = 'block';
+                        this.style.display = 'none'; // Hide the open-chat button
+                    });
+
+                    document.getElementById('close-chat').addEventListener('click', function () {
+                        console.log("Chat popup closed.");
+                        const chatPopup = document.getElementById('chat-popup');
+                        chatPopup.style.display = 'none';
+                        document.getElementById('open-chat').style.display = 'block'; // Show the open-chat button
+                    });
+
+                    connection.on("ReceiveMessage", (senderId, content, timestamp) => {
+                        console.log("Message received:", senderId, content);
+                        const messagesContainer = document.getElementById('chat-messages');
+                        const messageElement = document.createElement('div');
+                        messageElement.innerHTML = `<b>${senderId}:</b> ${content} <i>${new Date(timestamp).toLocaleTimeString()}</i>`;
+                        messagesContainer.appendChild(messageElement);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to the bottom
+                    });
+
+                    document.getElementById('send-message').addEventListener('click', async function () {
+                        const content = document.getElementById('chat-input').value;
+                        const userId = document.getElementById('user-id').value; // Get the user ID
+
+                        console.log("Sending message:", content, "from user:", userId);
+
+                        if (content.trim() && userId) {
+                            try {
+                                await connection.invoke("SendMessageToAdmin", userId, content); // Send message to admin
+                                console.log("Message sent successfully.");
+                                document.getElementById('chat-input').value = ''; // Clear the input
+                            } catch (err) {
+                                console.error("Error sending message:", err);
+                            }
+                        } else {
+                            console.warn("Message cannot be empty or user ID is missing.");
+                            alert("Message cannot be empty or user ID is missing.");
+                        }
+                    });
+                }
+            });
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/messageHub")
+                .build();
+
+            connection.on("UpdateParticipantCount", (questionnaireId, count) => {
+                console.log("Participant count updated:", questionnaireId, count);
+                const countElement = document.getElementById(`participant-count-${questionnaireId}`);
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+            });
+
+            connection.start()
+                .then(() => console.log("SignalR connection established."))
+                .catch(err => console.error("SignalR connection error:", err));
+        </script>
+}

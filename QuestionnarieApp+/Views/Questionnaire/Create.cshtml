@@ -1,0 +1,88 @@
+﻿@model QuestionnarieApp_.ViewModels.QuestionnaireViewModel
+
+<h2>Create Questionnaire</h2>
+
+<form asp-action="Create" method="post" id="questionnaireForm">
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="form-group">
+        <label asp-for="Title"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Description"></label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div id="questionsContainer">
+        <!-- Questions will be dynamically added here -->
+    </div>
+
+    <button type="button" id="addQuestionButton" class="btn btn-primary">Add Question</button>
+
+    <button type="submit" class="btn btn-success mt-3">Save Questionnaire</button>
+</form>
+
+@section Scripts {
+            <script>
+                let questionIndex = 0;
+
+                // Add Question
+                document.getElementById('addQuestionButton').addEventListener('click', function () {
+                    const questionCard = `
+                        <div class="card mt-3" id="questionCard_${questionIndex}">
+                            <div class="card-body">
+                                <h5>Question #${questionIndex + 1}</h5>
+                                <div class="form-group">
+                                    <label for="Questions_${questionIndex}__Text">Question Text</label>
+                                    <input type="text" name="Questions[${questionIndex}].Text" class="form-control" />
+                                </div>
+
+                                <div id="optionsContainer_${questionIndex}">
+                                    <!-- Options for this question will be added here -->
+                                </div>
+                                <button type="button" class="btn btn-secondary addOptionButton" data-question-index="${questionIndex}">Add Option</button>
+                                <button type="button" class="btn btn-danger removeQuestionButton" data-question-index="${questionIndex}">Remove Question</button>
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('questionsContainer').insertAdjacentHTML('beforeend', questionCard);
+
+                    questionIndex++;
+                });
+
+                // Delegate Add Option and Remove Buttons
+                document.getElementById('questionsContainer').addEventListener('click', function (event) {
+                    if (event.target.classList.contains('addOptionButton')) {
+                        const questionIndex = event.target.dataset.questionIndex;
+                        const optionsContainer = document.getElementById(`optionsContainer_${questionIndex}`);
+
+                        const optionIndex = optionsContainer.children.length;
+                        const optionHTML = `
+                            <div class="form-group mt-2" id="option_${questionIndex}_${optionIndex}">
+                                <label for="Questions_${questionIndex}__Options_${optionIndex}__Text">Option</label>
+                                <input type="text" name="Questions[${questionIndex}].Options[${optionIndex}].Text" class="form-control" />
+                                <button type="button" class="btn btn-danger mt-2 removeOptionButton" data-question-index="${questionIndex}" data-option-index="${optionIndex}">Remove Option</button>
+                            </div>
+                        `;
+
+                        optionsContainer.insertAdjacentHTML('beforeend', optionHTML);
+                    }
+
+                    if (event.target.classList.contains('removeQuestionButton')) {
+                        const questionIndex = event.target.dataset.questionIndex;
+                        document.getElementById(`questionCard_${questionIndex}`).remove();
+                    }
+
+                    if (event.target.classList.contains('removeOptionButton')) {
+                        const questionIndex = event.target.dataset.questionIndex;
+                        const optionIndex = event.target.dataset.optionIndex;
+                        document.getElementById(`option_${questionIndex}_${optionIndex}`).remove();
+                    }
+                });
+            </script>
+}
